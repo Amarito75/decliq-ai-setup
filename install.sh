@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================
 # Decliq.ai — Setup automatique VPS + Hermes
-# Usage : bash <(curl -fsSL https://raw.githubusercontent.com/decliq-ai/setup/main/install.sh)
+# Usage : bash <(curl -fsSL https://raw.githubusercontent.com/Amarito75/decliq-ai-setup/main/install.sh)
 # Compatible : Ubuntu 22.04 LTS / Debian 12
 # ============================================================
 
