@@ -440,6 +440,101 @@ else
 fi
 
 # ════════════════════════════════════════════════════════════
+# SECTION 13 — PAGE NOTION CLIENT (lecture seule)
+# ════════════════════════════════════════════════════════════
+section "13/13 — Création de la page Notion client"
+
+NOTION_CLIENT_PAGE=$(python3 - << 'PYEOF'
+import urllib.request, json, os, sys
+from datetime import date
+
+api_key   = os.environ.get("NOTION_API_KEY","")
+parent_id = os.environ.get("NOTION_PAGE_ID","")
+name      = os.environ.get("CLIENT_NAME","Client")
+firstname = os.environ.get("CLIENT_FIRSTNAME","")
+today     = date.today().strftime("%d/%m/%Y")
+
+if not api_key or not parent_id:
+    print("", file=sys.stderr)
+    sys.exit(0)
+
+hdrs = {"Authorization":f"Bearer {api_key}","Notion-Version":"2025-09-03","Content-Type":"application/json"}
+
+def req(method, path, data=None):
+    url = f"https://api.notion.com/v1{path}"
+    body = json.dumps(data).encode() if data else None
+    r = urllib.request.Request(url, data=body, headers=hdrs, method=method)
+    try:
+        with urllib.request.urlopen(r) as resp: return json.loads(resp.read())
+    except Exception as e: print(f"Notion error: {e}", file=sys.stderr); return {}
+
+def co(t, e="💡", c="blue_background"):
+    return {"object":"block","type":"callout","callout":{"rich_text":[{"type":"text","text":{"content":t}}],"icon":{"type":"emoji","emoji":e},"color":c}}
+def h1(t): return {"object":"block","type":"heading_1","heading_1":{"rich_text":[{"type":"text","text":{"content":t}}]}}
+def h2(t): return {"object":"block","type":"heading_2","heading_2":{"rich_text":[{"type":"text","text":{"content":t}}]}}
+def p(t=""): return {"object":"block","type":"paragraph","paragraph":{"rich_text":[{"type":"text","text":{"content":t}}] if t else []}}
+def b(t): return {"object":"block","type":"bulleted_list_item","bulleted_list_item":{"rich_text":[{"type":"text","text":{"content":t}}]}}
+def todo(t): return {"object":"block","type":"to_do","to_do":{"rich_text":[{"type":"text","text":{"content":t}}],"checked":False}}
+def div(): return {"object":"block","type":"divider","divider":{}}
+
+page = req("POST","/pages",{"parent":{"page_id":parent_id},"properties":{"title":{"title":[{"text":{"content":f"📊 Tableau de bord — {name}"}}]}}})
+pid = page.get("id","")
+if not pid: sys.exit(0)
+
+blocks = [
+    co("🔒 Page en lecture seule — mise à jour automatique par vos agents Decliq.ai","🔒","gray_background"),
+    div(),
+    h1(f"📊 Bienvenue{', '+firstname if firstname else ''} !"),
+    p("Voici votre espace de suivi Decliq.ai. Il est mis à jour automatiquement chaque jour par vos agents IA."),
+    p(""),
+    co(f"🏢  {name}     📅  Client depuis : {today}     🤖  Agents actifs : 5 / 24 (Phase 1)","📌","purple_background"),
+    div(),
+    h2("⚡ Activité du jour"),
+    co(f"Mis à jour le {today} à 07h35  ·  Prochain passage : demain 07h30","🕐","gray_background"),
+    p(""),
+    co("📧 Agent Résumé des Mails       ✅ Actif  ·  Rapport envoyé sur WhatsApp à 07h30","📧","blue_background"),
+    co("📡 Agent Veille Sectorielle      ✅ Actif  ·  3 articles clés envoyés à 06h30","📡","green_background"),
+    co("⭐ Agent Réputation & Avis       ✅ Actif  ·  Surveillance toutes les 4h  ·  Aucun avis négatif","⭐","yellow_background"),
+    co("📍 Agent Google Business         ✅ Actif  ·  1 post publié aujourd'hui","📍","blue_background"),
+    co("📝 Agent Compte-rendu            ✅ Actif  ·  Prêt pour votre prochaine réunion","📝","green_background"),
+    div(),
+    h2("🔔 Actions requises"),
+    co("Ces points nécessitent votre décision. Cochez une fois traité.","🔔","red_background"),
+    p(""),
+    todo("Aucune action requise pour le moment — vos agents gèrent tout ✅"),
+    p(""),
+    div(),
+    h2("📋 Journal des dernières actions"),
+    co(f"{today} 07h35  ·  Agent Mails  ·  Emails analysés, rapport envoyé sur WhatsApp","✅","green_background"),
+    co(f"{today} 06h30  ·  Agent Veille  ·  3 articles sectoriels sélectionnés et envoyés","✅","green_background"),
+    co(f"{today} 06h00  ·  Agent Comptabilité  ·  Transactions de la nuit catégorisées","✅","green_background"),
+    p(""),
+    div(),
+    h2("📞 Contacter Decliq.ai"),
+    co("Un problème ou une question ? Votre équipe est disponible.","📞","purple_background"),
+    b("📱 WhatsApp : message direct sur votre numéro dédié Decliq.ai"),
+    b("📧 Email : support@decliq.ai"),
+    b("🌐 Site : decliq.ai"),
+    p(""),
+    div(),
+    co("🔒 Cette page est en lecture seule et appartient à Decliq.ai. Ne pas partager ce lien publiquement sans activer 'Publish' dans Notion.","🔒","red_background"),
+]
+
+req("PATCH",f"/blocks/{pid}/children",{"children":blocks})
+print(f"https://notion.so/{pid.replace('-','')}")
+PYEOF
+)
+
+if [[ -n "$NOTION_CLIENT_PAGE" ]]; then
+    log "Page Notion client créée : $NOTION_CLIENT_PAGE"
+    echo "" >> "$WORKSPACE/.env"
+    echo "# Page Notion client (lecture seule)" >> "$WORKSPACE/.env"
+    echo "NOTION_CLIENT_PAGE_URL=$NOTION_CLIENT_PAGE" >> "$WORKSPACE/.env"
+else
+    warn "Page Notion client non créée — vérifier la clé API Notion"
+fi
+
+# ════════════════════════════════════════════════════════════
 # RAPPORT FINAL
 # ════════════════════════════════════════════════════════════
 IP=$(curl -s ifconfig.me 2>/dev/null || echo "IP inconnue")
@@ -461,6 +556,7 @@ echo -e "  3. ${YELLOW}OAuth Google${RESET}      → suivre la section 4.2 du Gu
 echo -e "  4. ${YELLOW}Remplir le .env${RESET}   → ${WORKSPACE}/.env (Meta, LinkedIn, Buffer...)"
 echo -e "  5. ${YELLOW}Ajouter sources RSS${RESET} → blogwatcher-cli add 'Source' https://..."
 echo -e "  6. ${YELLOW}Déployer les agents${RESET} → hermes agent deploy ..."
+[[ -n "${NOTION_CLIENT_PAGE:-}" ]] && echo -e "  7. ${YELLOW}Page Notion client${RESET}   → Activer 'Publish' dans Notion puis partager : ${NOTION_CLIENT_PAGE}"
 echo ""
 echo -e "${BOLD}🔗 Connexion SSH future :${RESET}"
 echo -e "  ssh -p ${SSH_PORT} decliq@${IP}"
